@@ -6,7 +6,7 @@ This tool is designed to be driven primarily by an external MIDI sequencer (for 
 
 The name comes from "Sample Bag", but if you read that as "simple" that's OK, that's a design goal. 
 
-(A sample bag AKA Show Bag, in Australian English was a thing you used to get at an agricultural show (you know, like a fair). When we went to the Royal Easter Show in Sydney, every time my would tell me they used to be free, and contain, you know *samples* but I didn't really believe him. When I was a kid you had to *buy* them and you still do - they were typically full of some kind of food like licorice or chocolate or bread with some kind of toy or something but now they sometimes contain just toys. Anyway this smplbag's free!)
+(A sample bag AKA Show Bag, in Australian English was a thing you used to get at an agricultural show (you know, like a fair). When we went to the Royal Easter Show in Sydney, every time my dad would tell me *every time* that in his day (the 1940s) they used to be free, and contain, you know *samples* but I didn't really believe him. In the 70s you had to *buy* them and you still do - they typically had different kinds of some kind of food like licorice or chocolate or chips with some kind of toy or something but now they sometimes contain just toys. Anyway this smplbag's free!)
 
 ## What it is
 
