@@ -32,7 +32,7 @@ Example:
 
 You can pre-program a structure in your sequencer, then capture and trigger parts in performance with minimal manual interaction. 
 
-On the M8 - the plan is then get the 
+On the M8 the plan is then resample each section back into a new instrument and drop it in to the song (pending the option to export samples as a zip of .wav files). 
 
 
 ## Features
