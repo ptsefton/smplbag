@@ -1,6 +1,10 @@
-# Smplbag
+# Smplbag 
+
+
 
 A browser-based "**non-looping looper**" which is one-shot sampler songwriting and live performance.
+
+[TRY ME!](ptsefton.com/smplbag/)
 
 This tool is designed to be driven primarily by an external MIDI sequencer (for example a Dirtywave M8), while still being playable from the web UI or a keyboard controller.
 
