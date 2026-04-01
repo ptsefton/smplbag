@@ -1,12 +1,10 @@
 # Smplbag 
 
-
-
-A browser-based "**non-looping looper**" which is one-shot sampler songwriting and live performance.
+A browser-based "**non-looping looper**" which is one-shot sampler for songwriting and live performance. This tool is designed to be driven primarily by an external MIDI sequencer (for example a Dirtywave M8), while still being playable from the web UI or a keyboard controller.
 
 [TRY ME!](https://ptsefton.com/smplbag/)
 
-This tool is designed to be driven primarily by an external MIDI sequencer (for example a Dirtywave M8), while still being playable from the web UI or a keyboard controller.
+
 
 The name comes from "Sample Bag", but if you read that as "simple" that's OK, that's a design goal. 
 
@@ -52,7 +50,7 @@ On the M8 the plan is then resample each section back into a new instrument and 
 - Stop / clear controls per pad
 - Output channel test tone tool to help work out where stuff is going in your USB interface. (Eg in the Tascam Model 12 in 10*12 mode tracks 1&2 go to 9&10 and 3-8 go to tho 3-8)
 
-* Current 4x4 layout and midi mapping might made configurable
+\* Current 4x4 layout and midi mapping might made configurable
 
 ## TODO (maybe)
 
