@@ -54,6 +54,7 @@ On the M8 the plan is then resample each section back into a new instrument and 
 
 ## TODO (maybe)
 
+- Make it prettier - make it look like a hardware sample or, even better, like the M8 text interface
 - Customize number of clips
 - Customize midi behaviour
 - Resampling features like play all (populated) clips so they can be sampled and sliced
