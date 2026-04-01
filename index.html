@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grid Sampler (No Server)</title>
+  <style>
+    :root {
+      --bg: #0f1221;
+      --panel: #171b30;
+      --panel2: #1f2544;
+      --text: #e7ebff;
+      --muted: #a8b0d8;
+      --ok: #26c281;
+      --warn: #f5b041;
+      --danger: #ef5350;
+      --border: #2f3762;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(circle at 10% -10%, #233068, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .app {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      background: linear-gradient(180deg, var(--panel), #12162a);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    .header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: grid;
+      gap: 8px;
+    }
+
+    .header h1 { margin: 0; font-size: 1.05rem; }
+    .header p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+
+    .content { display: grid; gap: 12px; padding: 12px; }
+
+    .row {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .top-controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    select, input[type="number"], button {
+      background: #13182f;
+      color: var(--text);
+      border: 1px solid #3c467a;
+      border-radius: 8px;
+      padding: 8px 9px;
+      font-size: 0.84rem;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      background: #2c3563;
+    }
+
+    button:hover:not([disabled]) { filter: brightness(1.08); }
+    button[disabled] { opacity: 0.5; cursor: not-allowed; }
+
+    .status { margin-top: 6px; min-height: 1.1em; font-size: 0.82rem; color: var(--muted); }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .danger { color: var(--danger); }
+
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .pad {
+      border: 1px solid #344070;
+      background: #12172d;
+      border-radius: 9px;
+      padding: 7px;
+      display: grid;
+      gap: 6px;
+      transition: background 0.1s ease, border-color 0.1s ease;
+    }
+
+    .pad.playing {
+      background: #c8f5e0;
+      border-color: #26c281;
+      color: #0a1a10;
+    }
+
+    .pad.playing .pad-head {
+      color: #1a4030;
+    }
+
+    .pad.empty {
+      background: #1e0f14;
+      border-color: #7a2535;
+    }
+
+    .pad.empty .pad-main {
+      background: #5a1c2e;
+      border-color: #a0304d;
+    }
+
+    .pad.disarmed {
+      opacity: 0.78;
+    }
+
+    .pad.disarmed .pad-main {
+      background: #2b3155;
+      border-color: #4a568e;
+    }
+
+    .pad-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .pad-main {
+      width: 100%;
+      padding: 10px 8px;
+      font-size: 0.81rem;
+      border-color: #4caf7c;
+      background: #1f6c4f;
+    }
+
+    .pad-main.recording {
+      border-color: #f35b77;
+      background: #b91c3a;
+      animation: pulse 1s infinite;
+    }
+
+    .pad-clear {
+      width: 100%;
+      padding: 6px 8px;
+      background: #622626;
+      border-color: #9f4c4c;
+      font-size: 0.76rem;
+    }
+
+    .pad-stop {
+      width: 100%;
+      padding: 6px 8px;
+      background: #7a5a1e;
+      border-color: #bc9151;
+      font-size: 0.76rem;
+    }
+
+    .pad-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .pad-route {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .pad-route select {
+      flex: 1;
+      min-width: 0;
+      padding: 5px 7px;
+      font-size: 0.75rem;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 92, 122, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(255, 92, 122, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 92, 122, 0); }
+    }
+
+    .config-head {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid #4d5a9e;
+      background: #1b2250;
+      font-size: 0.72rem;
+      margin-right: 4px;
+      margin-top: 4px;
+    }
+
+    .monitor {
+      font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, monospace;
+      font-size: 0.76rem;
+      background: #080c1a;
+      border: 1px solid #2a325a;
+      border-radius: 8px;
+      padding: 7px 9px;
+      height: 130px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 2px;
+      margin-top: 8px;
+    }
+
+    .monitor-row {
+      display: grid;
+      grid-template-columns: 52px 40px 38px 56px 60px 1fr;
+      gap: 6px;
+      padding: 2px 0;
+      border-bottom: 1px solid #141a33;
+      color: #9ea7cf;
+      white-space: nowrap;
+    }
+
+    .monitor-row .mt-time { color: #5a6490; }
+    .monitor-row .mt-ch   { color: #a8b0d8; }
+    .monitor-row .mt-type { color: #6ea8fe; font-weight: 700; }
+    .monitor-row .mt-note { color: #f5b041; }
+    .monitor-row .mt-vel  { color: #26c281; }
+    .monitor-row .mt-hit  { color: #ef5350; font-weight: 600; }
+
+    .monitor-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    @media (max-width: 800px) {
+      .pad-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .top-controls { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1>Sampler Grid 4×4</h1>
+      <p>Single-file browser sampler. Per pad trigger = record / stop-record / play from start.</p>
+    </header>
+
+    <section class="content">
+      <div class="row">
+        <div class="top-controls">
+          <select id="audioSource"></select>
+          <button id="refreshDevicesBtn" type="button">Refresh audio</button>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted);">
+            Offset
+            <input id="triggerOffsetMs" type="number" value="0" min="-200" max="200" step="1" style="width:72px;padding:6px 8px;" />
+            ms
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted);">
+            Test out
+            <select id="outputTestChannel" style="width:90px;padding:6px 8px;"></select>
+          </label>
+          <button id="testOutputBtn" type="button">Test output</button>
+        </div>
+        <div id="audioStatus" class="status"></div>
+      </div>
+
+      <div class="row">
+        <div id="padGrid" class="pad-grid"></div>
+        <div id="clipStatus" class="status">No clips recorded yet.</div>
+      </div>
+
+      <div class="row">
+        <div class="config-head">
+          <strong>MIDI</strong>
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
+            Ch
+            <select id="midiChannelSel" style="width:80px;padding:6px 8px;">
+              <option value="-1">All</option>
+              <option value="0">1</option>
+              <option value="1">2</option>
+              <option value="2">3</option>
+              <option value="3">4</option>
+              <option value="4">5</option>
+              <option value="5">6</option>
+              <option value="6">7</option>
+              <option value="7">8</option>
+              <option value="8">9</option>
+              <option value="9">10</option>
+              <option value="10">11</option>
+              <option value="11">12</option>
+              <option value="12">13</option>
+              <option value="13">14</option>
+              <option value="14">15</option>
+              <option value="15">16</option>
+            </select>
+          </label>
+          <span></span>
+          <button id="enableMidiBtn" type="button">Enable MIDI</button>
+        </div>
+        <div id="midiStatus" class="status warn">MIDI not enabled.</div>
+        <div id="midiInputs" class="status"></div>
+        <div class="monitor-head">
+          <span style="font-size:0.78rem;color:var(--muted);">MIDI monitor</span>
+          <button id="clearMonitorBtn" type="button" style="padding:4px 8px;font-size:0.75rem;">Clear</button>
+        </div>
+        <div id="midiMonitor" class="monitor"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const PAD_COUNT = 16;
+    const COLS = 4;
+    const ROWS = PAD_COUNT / COLS;
+    const ARM_NOTE_OFFSET = 24;
+
+    // Notes start at 0 bottom-left, go right then up.
+    function padMidiNote(i) {
+      const rowFromBottom = (ROWS - 1) - Math.floor(i / COLS);
+      return rowFromBottom * COLS + (i % COLS);
+    }
+
+    const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+    // Display convention used here: MIDI note 0 = C1.
+    function midiNoteName(n) {
+      return NOTE_NAMES[n % 12] + (Math.floor(n / 12) + 1);
+    }
+
+    const ui = {
+      audioSource: document.getElementById('audioSource'),
+      refreshDevicesBtn: document.getElementById('refreshDevicesBtn'),
+      triggerOffsetMs: document.getElementById('triggerOffsetMs'),
+      outputTestChannel: document.getElementById('outputTestChannel'),
+      testOutputBtn: document.getElementById('testOutputBtn'),
+      audioStatus: document.getElementById('audioStatus'),
+      clipStatus: document.getElementById('clipStatus'),
+      padGrid: document.getElementById('padGrid'),
+      enableMidiBtn: document.getElementById('enableMidiBtn'),
+      midiChannelSel: document.getElementById('midiChannelSel'),
+      midiStatus: document.getElementById('midiStatus'),
+      midiInputs: document.getElementById('midiInputs'),
+      midiMonitor: document.getElementById('midiMonitor'),
+      clearMonitorBtn: document.getElementById('clearMonitorBtn')
+    };
+
+    const pads = [];
+    let mediaStream = null;
+    let activeDeviceId = null;
+    let midiAccess = null;
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const MAX_OUTPUT_CHANNEL_OPTIONS = 32;
+
+    function getOutputChannelCount() {
+      const maxCount = audioContext.destination.maxChannelCount
+        || audioContext.destination.channelCount
+        || 2;
+      return Math.max(1, Math.min(MAX_OUTPUT_CHANNEL_OPTIONS, maxCount));
+    }
+
+    const outputChannelCount = getOutputChannelCount();
+
+    try {
+      audioContext.destination.channelCountMode = 'explicit';
+      audioContext.destination.channelInterpretation = 'discrete';
+      audioContext.destination.channelCount = outputChannelCount;
+    } catch {
+      // Some browser/device combos keep these readonly.
+    }
+
+    function fillOutputSelect(selectEl, selectedIndex = 0) {
+      if (!selectEl) return;
+      selectEl.innerHTML = '';
+      for (let ch = 0; ch < outputChannelCount; ch += 1) {
+        const opt = document.createElement('option');
+        opt.value = String(ch);
+        opt.textContent = `Out ${ch + 1}`;
+        selectEl.appendChild(opt);
+      }
+      const safeIndex = Math.max(0, Math.min(outputChannelCount - 1, selectedIndex));
+      selectEl.value = String(safeIndex);
+    }
+
+    function setStatus(el, text, tone = '') {
+      el.classList.remove('ok', 'warn', 'danger');
+      if (tone) el.classList.add(tone);
+      el.textContent = text;
+    }
+
+    async function resumeAudioContext() {
+      if (audioContext.state === 'suspended') {
+        try { await audioContext.resume(); } catch { /* ignore */ }
+      }
+    }
+
+    async function decodePadBlobToBuffer(pad) {
+      if (!pad.blob) return false;
+      try {
+        const arr = await pad.blob.arrayBuffer();
+        const decoded = await audioContext.decodeAudioData(arr.slice(0));
+        pad.buffer = decoded;
+        return true;
+      } catch {
+        pad.buffer = null;
+        return false;
+      }
+    }
+
+    async function playOutputTestTone() {
+      try {
+        await resumeAudioContext();
+        const selectedOut = Number.parseInt(ui.outputTestChannel.value, 10);
+        const outIndex = Number.isInteger(selectedOut)
+          ? Math.max(0, Math.min(outputChannelCount - 1, selectedOut))
+          : 0;
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const route = audioContext.createChannelMerger(outputChannelCount);
+        const now = audioContext.currentTime;
+
+        osc.type = 'sine';
+        osc.frequency.value = 330 + (outIndex * 55);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+
+        osc.connect(gain);
+        gain.connect(route, 0, outIndex);
+        route.connect(audioContext.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.45);
+        osc.onended = () => {
+          try { osc.disconnect(); } catch { /* ignore */ }
+          try { gain.disconnect(); } catch { /* ignore */ }
+          try { route.disconnect(); } catch { /* ignore */ }
+        };
+
+        setStatus(ui.audioStatus, `Testing Out ${outIndex + 1}. If only Out 1-2 are audible, the browser is likely collapsing to stereo.`, 'warn');
+      } catch (err) {
+        setStatus(ui.audioStatus, `Output test failed: ${err.message || err}`, 'danger');
+      }
+    }
+
+    function releaseStream() {
+      mediaStream?.getTracks().forEach(track => track.stop());
+      mediaStream = null;
+      activeDeviceId = null;
+    }
+
+    function buildInputConstraints(deviceId) {
+      // These are browser-level constraints, not macOS global settings.
+      // Browsers may ignore some fields depending on hardware and policy.
+      const audio = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        latency: 0,
+        sampleRate: 48000,
+        sampleSize: 16
+      };
+      if (deviceId) audio.deviceId = { exact: deviceId };
+      return { audio };
+    }
+
+    function getInputSettingsSummary() {
+      const t = mediaStream?.getAudioTracks?.()[0];
+      if (!t) return '';
+      const s = t.getSettings?.() || {};
+      return `ec:${s.echoCancellation ?? '-'} ns:${s.noiseSuppression ?? '-'} agc:${s.autoGainControl ?? '-'} sr:${s.sampleRate ?? '-'} ch:${s.channelCount ?? '-'} lat:${s.latency ?? '-'}`;
+    }
+
+    async function ensureStream(deviceId) {
+      if (mediaStream && activeDeviceId === deviceId) return mediaStream;
+      releaseStream();
+      const constraints = buildInputConstraints(deviceId);
+      mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      activeDeviceId = deviceId;
+      return mediaStream;
+    }
+
+    function chooseMimeType() {
+      const candidates = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/webm', 'audio/ogg'];
+      for (const type of candidates) {
+        if (window.MediaRecorder && MediaRecorder.isTypeSupported(type)) return type;
+      }
+      return '';
+    }
+
+    function safeDeviceLabel(device, idx) {
+      return device.label || `Input ${idx + 1} (${device.deviceId.slice(0, 6)}…)`;
+    }
+
+    async function refreshAudioDevices() {
+      if (!navigator.mediaDevices?.enumerateDevices) {
+        setStatus(ui.audioStatus, 'Audio device listing unsupported.', 'danger');
+        return;
+      }
+
+      try { await ensureStream(ui.audioSource.value || null); } catch { /* ignore */ }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter(d => d.kind === 'audioinput');
+      const previous = ui.audioSource.value;
+      ui.audioSource.innerHTML = '';
+
+      if (!inputs.length) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No audio inputs found';
+        ui.audioSource.appendChild(opt);
+        setStatus(ui.audioStatus, 'No microphone / USB input found.', 'danger');
+        return;
+      }
+
+      inputs.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = d.deviceId;
+        opt.textContent = safeDeviceLabel(d, i);
+        ui.audioSource.appendChild(opt);
+      });
+
+      if ([...ui.audioSource.options].some(o => o.value === previous)) ui.audioSource.value = previous;
+      const streamSettings = getInputSettingsSummary();
+      setStatus(ui.audioStatus, `Found ${inputs.length} audio input device(s), ${outputChannelCount} output channel(s). ${streamSettings}`.trim(), 'ok');
+    }
+
+    function createPad(index) {
+      const el = document.createElement('div');
+      el.className = 'pad';
+      const note = padMidiNote(index);
+      el.innerHTML = `
+        <div class="pad-head">
+          <span><strong>${midiNoteName(note)}</strong> <span style="opacity:0.9;">(arm ${midiNoteName(note + ARM_NOTE_OFFSET)})</span></span>
+          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+            <input id="arm-${index}" type="checkbox" style="accent-color:var(--ok);" />
+            Arm
+          </label>
+        </div>
+        <button class="pad-main" id="padMain-${index}" type="button">● Rec / ▶</button>
+        <div class="pad-actions">
+          <button class="pad-stop" id="padStop-${index}" type="button" disabled>■ Stop</button>
+          <button class="pad-clear" id="padClear-${index}" type="button" disabled>✕ Clear</button>
+        </div>
+        <label class="pad-route">
+          out
+          <select id="padOut-${index}"></select>
+        </label>
+      `;
+      ui.padGrid.appendChild(el);
+
+      const pad = {
+        index,
+        note,
+        mediaRecorder: null,
+        chunks: [],
+        blob: null,
+        url: null,
+        buffer: null,
+        activeSource: null,
+        activeRoute: null,
+        isPlaying: false,
+        mainBtn: el.querySelector(`#padMain-${index}`),
+        stopBtn: el.querySelector(`#padStop-${index}`),
+        clearBtn: el.querySelector(`#padClear-${index}`),
+        armedChk: el.querySelector(`#arm-${index}`),
+        outputSel: el.querySelector(`#padOut-${index}`)
+      };
+
+      fillOutputSelect(pad.outputSel, 0);
+
+      pad.mainBtn.addEventListener('click', () => triggerPad(pad, 'Button'));
+      pad.stopBtn.addEventListener('click', () => stopPad(pad));
+      pad.clearBtn.addEventListener('click', () => clearPad(pad));
+      pad.armedChk.addEventListener('change', () => {
+        if (!pad.armedChk.checked && (isRecording(pad) || isPlaying(pad))) {
+          stopPad(pad);
+        }
+        updatePadUI(pad);
+      });
+
+      pads.push(pad);
+      updatePadUI(pad);
+    }
+
+    function buildPads() {
+      for (let i = 0; i < PAD_COUNT; i += 1) createPad(i);
+    }
+
+    function isRecording(pad) {
+      return !!pad.mediaRecorder && pad.mediaRecorder.state === 'recording';
+    }
+
+    function isStopping(pad) {
+      return !!pad.mediaRecorder && pad.mediaRecorder.state === 'inactive';
+    }
+
+    function isPlaying(pad) {
+      return !!pad.isPlaying;
+    }
+
+    function updatePadUI(pad) {
+      const rec = isRecording(pad);
+      const play = isPlaying(pad);
+      const has = !!pad.blob;
+      const armed = !!pad.armedChk?.checked;
+      const padEl = pad.mainBtn.closest('.pad');
+
+      pad.mainBtn.classList.toggle('recording', rec);
+      pad.clearBtn.disabled = !has || rec;
+      pad.stopBtn.disabled = !play && !rec;
+      pad.mainBtn.disabled = !armed && !rec && !play;
+      padEl.classList.toggle('playing', play && !rec);
+      padEl.classList.toggle('empty', !has && !rec);
+      padEl.classList.toggle('disarmed', !armed);
+
+      if (rec) {
+        pad.mainBtn.textContent = '■ Stop Rec';
+      } else if (play) {
+        pad.mainBtn.textContent = '▶ Retrig';
+      } else if (has) {
+        pad.mainBtn.textContent = '▶ Play';
+      } else {
+        pad.mainBtn.textContent = '● Rec / ▶';
+      }
+    }
+
+    async function startPadRecording(pad, sourceLabel) {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setStatus(ui.clipStatus, 'Recording is not supported in this browser.', 'danger');
+        return;
+      }
+
+      if (isRecording(pad) || isStopping(pad)) return;
+
+      let stream;
+      try {
+        stream = await ensureStream(ui.audioSource.value || null);
+      } catch (err) {
+        setStatus(ui.clipStatus, `Could not access audio input: ${err.message || err}`, 'danger');
+        return;
+      }
+
+      const mimeType = chooseMimeType();
+      try {
+        pad.mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      } catch (err) {
+        setStatus(ui.clipStatus, `Recorder setup failed: ${err.message || err}`, 'danger');
+        pad.mediaRecorder = null;
+        return;
+      }
+
+      pad.chunks = [];
+      pad.mediaRecorder.ondataavailable = e => {
+        if (e.data && e.data.size > 0) pad.chunks.push(e.data);
+      };
+
+      pad.mediaRecorder.onstop = async () => {
+        const type = pad.mediaRecorder?.mimeType || 'audio/webm';
+        pad.blob = new Blob(pad.chunks, { type });
+        if (pad.url) URL.revokeObjectURL(pad.url);
+        pad.url = URL.createObjectURL(pad.blob);
+        await decodePadBlobToBuffer(pad);
+        pad.mediaRecorder = null;
+        updatePadUI(pad);
+        setStatus(ui.clipStatus, `Pad ${pad.index + 1}: recorded (${(pad.blob.size / 1024).toFixed(1)} KB).`, 'ok');
+      };
+
+      pad.mediaRecorder.onerror = e => {
+        const msg = e.error?.message || e.message || 'Unknown recorder error';
+        setStatus(ui.clipStatus, `Pad ${pad.index + 1}: recording error: ${msg}`, 'danger');
+      };
+
+      pad.mediaRecorder.start();
+      setStatus(ui.clipStatus, `Pad ${pad.index + 1}: recording...`, 'warn');
+      updatePadUI(pad);
+    }
+
+    function stopPadRecording(pad) {
+      if (!isRecording(pad)) return Promise.resolve();
+      return new Promise(resolve => {
+        const origOnstopped = pad.mediaRecorder.onstop;
+        pad.mediaRecorder.onstop = async (e) => {
+          await origOnstopped(e);
+          resolve();
+        };
+        pad.mediaRecorder.stop();
+        setStatus(ui.clipStatus, `Pad ${pad.index + 1}: stopping...`, 'warn');
+        updatePadUI(pad);
+      });
+    }
+
+    function stopPadPlayback(pad) {
+      if (!pad.activeSource) return;
+      try { pad.activeSource.stop(); } catch { /* ignore */ }
+      try { pad.activeSource.disconnect(); } catch { /* ignore */ }
+      try { pad.activeRoute?.disconnect(); } catch { /* ignore */ }
+      pad.activeSource = null;
+      pad.activeRoute = null;
+      pad.isPlaying = false;
+      updatePadUI(pad);
+      setStatus(ui.clipStatus, `Pad ${pad.index + 1}: stopped.`, 'ok');
+    }
+
+    function stopPad(pad) {
+      if (isRecording(pad)) {
+        stopPadRecording(pad);
+        return;
+      }
+      if (isPlaying(pad)) {
+        stopPadPlayback(pad);
+      }
+    }
+
+    async function playPad(pad, sourceLabel) {
+      if (!pad.blob) return;
+      try {
+        await resumeAudioContext();
+        if (!pad.buffer) {
+          const ok = await decodePadBlobToBuffer(pad);
+          if (!ok) throw new Error('decode failed');
+        }
+
+        if (pad.activeSource) {
+          try { pad.activeSource.stop(); } catch { /* ignore */ }
+          try { pad.activeSource.disconnect(); } catch { /* ignore */ }
+          try { pad.activeRoute?.disconnect(); } catch { /* ignore */ }
+          pad.activeSource = null;
+          pad.activeRoute = null;
+        }
+
+        const src = audioContext.createBufferSource();
+        src.buffer = pad.buffer;
+        src.loop = false;
+        const route = audioContext.createChannelMerger(outputChannelCount);
+        const selectedOut = Number.parseInt(pad.outputSel.value, 10);
+        const outIndex = Number.isInteger(selectedOut)
+          ? Math.max(0, Math.min(outputChannelCount - 1, selectedOut))
+          : 0;
+        src.connect(route, 0, outIndex);
+        route.connect(audioContext.destination);
+        pad.activeSource = src;
+        pad.activeRoute = route;
+        pad.isPlaying = true;
+        src.onended = () => {
+          if (pad.activeSource === src) {
+            try { route.disconnect(); } catch { /* ignore */ }
+            pad.activeSource = null;
+            pad.activeRoute = null;
+            pad.isPlaying = false;
+            updatePadUI(pad);
+          }
+        };
+        const offsetMs = Number.parseFloat(ui.triggerOffsetMs.value);
+        const safeOffsetMs = Number.isFinite(offsetMs) ? Math.max(-200, Math.min(200, offsetMs)) : 0;
+        const offsetSec = safeOffsetMs / 1000;
+        const when = audioContext.currentTime + Math.max(0, offsetSec);
+        const startOffset = Math.max(0, -offsetSec);
+        if (startOffset >= src.buffer.duration) {
+          pad.activeSource = null;
+          pad.isPlaying = false;
+          updatePadUI(pad);
+          setStatus(ui.clipStatus, `Pad ${pad.index + 1}: offset too negative for clip length.`, 'warn');
+          return;
+        }
+        src.start(when, startOffset);
+        updatePadUI(pad);
+        setStatus(ui.clipStatus, `Pad ${pad.index + 1}: triggered by ${sourceLabel} with offset ${startOffset}.`, 'ok');
+      } catch (err) {
+        setStatus(ui.clipStatus, `Pad ${pad.index + 1}: playback failed: ${err.message || err}`, 'danger');
+      }
+    }
+
+    function clearPad(pad) {
+      if (isRecording(pad) || isStopping(pad)) return;
+      if (pad.activeSource) {
+        try { pad.activeSource.stop(); } catch { /* ignore */ }
+        try { pad.activeSource.disconnect(); } catch { /* ignore */ }
+        try { pad.activeRoute?.disconnect(); } catch { /* ignore */ }
+      }
+      pad.activeSource = null;
+      pad.activeRoute = null;
+      pad.isPlaying = false;
+      if (pad.url) URL.revokeObjectURL(pad.url);
+      pad.url = null;
+      pad.blob = null;
+      pad.buffer = null;
+      updatePadUI(pad);
+      setStatus(ui.clipStatus, `Pad ${pad.index + 1}: cleared.`, 'warn');
+    }
+
+    async function triggerPad(pad, sourceLabel) {
+      if (!pad.armedChk.checked) {
+        setStatus(ui.clipStatus, `Pad ${pad.index + 1}: not armed.`, 'warn');
+        return;
+      }
+      if (isRecording(pad)) {
+        if (pad.buffer) {
+          await playPad(pad, sourceLabel);
+          return;
+        }
+        stopPadRecording(pad);
+        return;
+      }
+      if (isStopping(pad)) return;
+      if (!pad.blob) {
+        await startPadRecording(pad, sourceLabel);
+        return;
+      }
+      await playPad(pad, sourceLabel);
+    }
+
+    function matchingPadsForMidi(data1) {
+      return pads.filter(p => p.note === data1);
+    }
+
+    function matchingPadsForArmNote(data1) {
+      return pads.filter(p => (p.note + ARM_NOTE_OFFSET) === data1);
+    }
+
+    const MONITOR_MAX = 80;
+
+    function logMidiEvent(ch, type, data1, data2, hit) {
+      const now = new Date();
+      const ts = `${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}.${String(now.getMilliseconds()).padStart(3,'0').slice(0,2)}`;
+      const noteName = type === 'Note' ? midiNoteName(data1) : `CC${data1}`;
+      const row = document.createElement('div');
+      row.className = 'monitor-row';
+      row.innerHTML = `<span class="mt-time">${ts}</span><span class="mt-ch">Ch ${ch + 1}</span><span class="mt-type">${type}</span><span class="mt-note">${noteName}</span><span class="mt-vel">vel ${data2}</span><span class="mt-hit">${hit ? '▶ pad' : ''}</span>`;
+      ui.midiMonitor.prepend(row);
+      while (ui.midiMonitor.children.length > MONITOR_MAX) ui.midiMonitor.removeChild(ui.midiMonitor.lastChild);
+    }
+
+    async function handleMidiMessage(event) {
+      const [status, data1, data2] = event.data;
+      const command = status & 0xf0;
+      const channel = status & 0x0f;
+      const selectedChannel = Number(ui.midiChannelSel.value);
+      const channelMatches = selectedChannel === -1 || channel === selectedChannel;
+      const triggerHits = channelMatches ? matchingPadsForMidi(data1) : [];
+      const armHits = channelMatches ? matchingPadsForArmNote(data1) : [];
+
+      if (command === 0x80 || (command === 0x90 && data2 === 0)) {
+        logMidiEvent(channel, 'Note', data1, data2, triggerHits.length > 0 || armHits.length > 0);
+        if (!channelMatches) return;
+        for (const pad of triggerHits) {
+          if (isRecording(pad)) {
+            await stopPadRecording(pad);
+          }
+        }
+        return;
+      }
+
+      if (command === 0x90 || command === 0xB0) {
+        const type = command === 0x90 ? 'Note' : 'CC';
+        const hasHit = command === 0x90
+          ? (triggerHits.length > 0 || armHits.length > 0)
+          : triggerHits.length > 0;
+        logMidiEvent(channel, type, data1, data2, hasHit);
+        if (!channelMatches || data2 <= 0) return;
+
+        if (command === 0x90) {
+          for (const pad of armHits) {
+            pad.armedChk.checked = !pad.armedChk.checked;
+            if (!pad.armedChk.checked && (isRecording(pad) || isPlaying(pad))) {
+              stopPad(pad);
+            }
+            updatePadUI(pad);
+            setStatus(ui.clipStatus, `Pad ${pad.index + 1}: ${pad.armedChk.checked ? 'armed' : 'disarmed'} (Note ${data1}).`, 'ok');
+          }
+
+          for (const pad of triggerHits) {
+            if (pad.armedChk.checked) {
+              if (isRecording(pad)) {
+                await stopPadRecording(pad);
+                if (pad.blob) await playPad(pad, `Note ${data1}`);
+              } else if (isPlaying(pad)) {
+                await playPad(pad, `Note ${data1}`);
+              } else if (pad.blob) {
+                await playPad(pad, `Note ${data1}`);
+              } else {
+                await startPadRecording(pad);
+              }
+            } else {
+              setStatus(ui.clipStatus, `Pad ${pad.index + 1} is disarmed.`, 'warn');
+            }
+          }
+        }
+      }
+    }
+
+    function refreshMidiInputsUI() {
+      if (!midiAccess) {
+        ui.midiInputs.textContent = '';
+        return;
+      }
+      const names = [...midiAccess.inputs.values()].map(i => i.name || 'Unnamed MIDI input');
+      ui.midiInputs.innerHTML = names.length
+        ? names.map(name => `<span class="pill">${name}</span>`).join('')
+        : '<span class="warn">No MIDI inputs detected.</span>';
+    }
+
+    function attachMidiListeners() {
+      for (const input of midiAccess.inputs.values()) input.onmidimessage = handleMidiMessage;
+      refreshMidiInputsUI();
+    }
+
+    async function enableMidi() {
+      if (!navigator.requestMIDIAccess) {
+        setStatus(ui.midiStatus, 'Web MIDI is not supported in this browser.', 'danger');
+        return;
+      }
+      try {
+        midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+      } catch (err) {
+        setStatus(ui.midiStatus, `Could not enable MIDI: ${err.message || err}`, 'danger');
+        return;
+      }
+      midiAccess.onstatechange = attachMidiListeners;
+      attachMidiListeners();
+      setStatus(ui.midiStatus, 'MIDI enabled. Note/CC now triggers mapped pads.', 'ok');
+    }
+
+    ui.refreshDevicesBtn.addEventListener('click', refreshAudioDevices);
+    ui.testOutputBtn.addEventListener('click', playOutputTestTone);
+    ui.enableMidiBtn.addEventListener('click', enableMidi);
+    ui.clearMonitorBtn.addEventListener('click', () => { ui.midiMonitor.innerHTML = ''; });
+    ui.audioSource.addEventListener('change', () => releaseStream());
+    window.addEventListener('beforeunload', () => releaseStream());
+
+    fillOutputSelect(ui.outputTestChannel, 0);
+    buildPads();
+    refreshAudioDevices();
+  </script>
+</body>
+</html>
