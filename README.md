@@ -53,9 +53,7 @@ On the M8 the plan is then resample each section back into a new instrument and 
 
 Single `index.html` — no build step, no server. Open in a Chromium-based browser.
 
-
-Each pad shows:
-- Note name and arm note (e.g. `C1`, `ARM (E3)`)
+The UI uses a Dirtywave M8-inspired monospace terminal aesthetic. Each pad shows:- Note name and arm note (e.g. `C1`, `ARM (E3)`)
 - A square button: `O REC` → `> PLAY` → `>> RETRIG` → `■ STOP REC` depending on state
 - Two small icon buttons for stop (`■`) and clear (`✕`)
 - Output channel selector
