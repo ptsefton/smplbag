@@ -445,6 +445,7 @@
     <div class="screen-bar">
       <span class="title">SMPLBAG</span>
       <span class="subtitle">CLIP SAMPLER/LAUNCHER // NO SERVER</span>
+      <button class="btn" id="exportBtn" type="button" style="font-size:0.68rem;padding:2px 8px;">[Export]</button>
       <button class="btn" id="modeToggle" type="button" style="font-size:0.68rem;padding:2px 8px;">[LIT]</button>
     </div>
 
@@ -1117,6 +1118,112 @@
       setStatus(ui.midiStatus, 'MIDI enabled. Note/CC now triggers mapped pads.', 'ok');
     }
 
+    // ── WAV export ───────────────────────────────────────
+    function buildWav(int16Data, sampleRate, numChannels, cuePositions, labels) {
+      const dataBytes    = int16Data.length * 2;
+      const numCues      = cuePositions.length;
+      const cueDataBytes = 4 + numCues * 24;
+
+      // labl sub-chunk per cue: "labl"(4) + size(4) + id(4) + null-term string padded to even
+      const lablStrs = cuePositions.map((_, i) => {
+        const s = ((labels && labels[i]) || `Clip ${i + 1}`) + '\0';
+        return s.length % 2 ? s + '\0' : s; // pad odd-length strings to even
+      });
+      const lablBodyBytes = lablStrs.reduce((n, s) => n + 8 + 4 + s.length, 0);
+      const listDataBytes = 4 + lablBodyBytes; // "adtl" + labl chunks
+
+      const waveBytes = 4                                      // "WAVE" fourcc
+                      + 24                                     // fmt  chunk
+                      + (numCues ? 8 + cueDataBytes : 0)      // cue  chunk
+                      + (numCues ? 8 + listDataBytes : 0)     // LIST/adtl chunk
+                      + 8 + dataBytes;                        // data chunk
+
+      const buf  = new ArrayBuffer(8 + waveBytes);
+      const view = new DataView(buf);
+      let p = 0;
+      const str = s => { for (const c of s) view.setUint8(p++, c.charCodeAt(0)); };
+      const u16 = v => { view.setUint16(p, v, true); p += 2; };
+      const u32 = v => { view.setUint32(p, v, true); p += 4; };
+
+      // RIFF
+      str('RIFF'); u32(waveBytes); str('WAVE');
+      // fmt
+      str('fmt '); u32(16);
+      u16(1); u16(numChannels); u32(sampleRate);
+      u32(sampleRate * numChannels * 2); u16(numChannels * 2); u16(16);
+      // cue
+      if (numCues) {
+        str('cue '); u32(cueDataBytes); u32(numCues);
+        for (let i = 0; i < numCues; i++) {
+          u32(i + 1); u32(cuePositions[i]); str('data'); u32(0); u32(0); u32(cuePositions[i]);
+        }
+        // LIST/adtl/labl — gives cue points names so ffprobe shows them as chapters
+        str('LIST'); u32(listDataBytes); str('adtl');
+        for (let i = 0; i < numCues; i++) {
+          str('labl'); u32(4 + lablStrs[i].length); u32(i + 1); str(lablStrs[i]);
+        }
+      }
+      // data
+      str('data'); u32(dataBytes);
+      new Int16Array(buf, p).set(int16Data);
+      return buf;
+    }
+
+    async function exportClips() {
+      const btn = document.getElementById('exportBtn');
+      const active = pads.filter(p => p.buffer).sort((a, b) => a.note - b.note);
+      if (!active.length) { setStatus(ui.clipStatus, 'No clips to export.', 'warn'); return; }
+
+      btn.textContent = '[Working...]';
+      btn.disabled = true;
+      setStatus(ui.clipStatus, `Building WAV: ${active.length} clip(s)…`, 'warn');
+
+      try {
+        const sampleRate   = audioContext.sampleRate;
+        const maxSamples   = Math.max(...active.map(p => p.buffer.length));
+        const totalSamples = maxSamples * active.length;
+        const cuePositions = active.map((_, i) => i * maxSamples);
+
+        // mono mixdown, zero-padded to maxSamples per clip
+        const pcm = new Float32Array(totalSamples);
+        for (let i = 0; i < active.length; i++) {
+          const abuf  = active[i].buffer;
+          const start = i * maxSamples;
+          const len   = Math.min(abuf.length, maxSamples);
+          for (let ch = 0; ch < abuf.numberOfChannels; ch++) {
+            const chan = abuf.getChannelData(ch);
+            for (let s = 0; s < len; s++) pcm[start + s] += chan[s];
+          }
+          if (abuf.numberOfChannels > 1) {
+            for (let s = 0; s < len; s++) pcm[start + s] /= abuf.numberOfChannels;
+          }
+        }
+
+        // float32 → int16
+        const int16 = new Int16Array(totalSamples);
+        for (let i = 0; i < totalSamples; i++) {
+          const v = Math.max(-1, Math.min(1, pcm[i]));
+          int16[i] = Math.round(v < 0 ? v * 0x8000 : v * 0x7FFF);
+        }
+
+        const filename = `smplbag-${active.length}.wav`;
+        const labels   = active.map(p => midiNoteName(p.note));
+        const wavBuf   = buildWav(int16, Math.round(sampleRate), 1, cuePositions, labels);
+        const blob     = new Blob([wavBuf], { type: 'audio/wav' });
+        const url      = URL.createObjectURL(blob);
+        const a        = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        setStatus(ui.clipStatus, `Downloaded ${filename} — ${active.length} clip(s), ${(wavBuf.byteLength / 1024).toFixed(0)} KB.`, 'ok');
+      } catch (err) {
+        setStatus(ui.clipStatus, `Export failed: ${err.message || err}`, 'danger');
+      } finally {
+        btn.textContent = '[Export]';
+        btn.disabled = false;
+      }
+    }
+
     // ── IndexedDB clip persistence ────────────────────────
     const DB_NAME    = 'smplbag';
     const DB_VERSION = 1;
@@ -1188,6 +1295,7 @@
       } catch { /* ignore */ }
     }
 
+    document.getElementById('exportBtn').addEventListener('click', exportClips);
     ui.refreshDevicesBtn.addEventListener('click', refreshAudioDevices);
     ui.testOutputBtn.addEventListener('click', playOutputTestTone);
     ui.enableMidiBtn.addEventListener('click', enableMidi);
