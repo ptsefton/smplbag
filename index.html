@@ -3,333 +3,513 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Grid Sampler (No Server)</title>
+  <title>SMPLBAG :: 4x4 Sampler</title>
   <style>
     :root {
-      --bg: #0f1221;
-      --panel: #171b30;
-      --panel2: #1f2544;
-      --text: #e7ebff;
-      --muted: #a8b0d8;
-      --ok: #26c281;
-      --warn: #f5b041;
-      --danger: #ef5350;
-      --border: #2f3762;
+      /* palette */
+      --bg:      #06070b;
+      --dev:     #0e1018;
+      --screen:  #090b12;
+      --panel:   #141720;
+      --text:    #ffffff;
+      --dim:     #8890aa;
+      --sublabel: #aab0c8;
+      --note:    #f5c050;
+      --ok:      #44ee77;
+      --play:    #55bbff;
+      --warn:    #ffaa22;
+      --rec:     #ff3333;
+      --border:  #1e2235;
+      --border2: #2e3450;
+      /* structural / chrome */
+      --dev-border:   #1c2030;
+      --shadow-outer: #08090e;
+      --screen-border: #0f1220;
+      --btn-shadow:    #04050a;
+      --btn-hover-bg:  #161928;
+      --pad-btn-bg:    #0e1018;
+      --pad-btn-hover: #131620;
+      --pad-stop-bg:   #09090f;
+      --sm-shadow:     #03030a;
+      /* pad state tints */
+      --rec-pad-border:    #3a1515;
+      --rec-head-bg:       #0e0508;
+      --rec-head-border:   #2a0f0f;
+      --play-pad-border:   #153525;
+      --play-head-bg:      #060e08;
+      --play-head-border:  #0f2a18;
+      --rec-pulse-from:    #140508;
+      --rec-pulse-to:      #1e080d;
+      /* monitor */
+      --monitor-sep: #0d0f18;
     }
 
-    * { box-sizing: border-box; }
+    body.light {
+      --bg:      #d8dae0;
+      --dev:     #f2f3f7;
+      --screen:  #ffffff;
+      --panel:   #e4e6ee;
+      --text:    #0a0b10;
+      --dim:     #5a5f78;
+      --sublabel: #383c52;
+      --note:    #8a5f00;
+      --ok:      #1a7a3a;
+      --play:    #1558aa;
+      --warn:    #b06000;
+      --rec:     #c01010;
+      --border:  #b8bacf;
+      --border2: #9a9cb8;
+      --dev-border:   #9a9cb8;
+      --shadow-outer: #b0b2c8;
+      --screen-border: #c8cad8;
+      --btn-shadow:    #8890aa;
+      --btn-hover-bg:  #e8eaf4;
+      --pad-btn-bg:    #eceef8;
+      --pad-btn-hover: #e4e6f4;
+      --pad-stop-bg:   #f4f5fc;
+      --sm-shadow:     #9090a8;
+      --rec-pad-border:   #e8a0a0;
+      --rec-head-bg:      #fff0f0;
+      --rec-head-border:  #f0c0c0;
+      --play-pad-border:  #70c090;
+      --play-head-bg:     #f0fff5;
+      --play-head-border: #a0d8b8;
+      --rec-pulse-from:   #fff0f0;
+      --rec-pulse-to:     #ffe4e4;
+      --monitor-sep: #d0d2e0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      background: radial-gradient(circle at 10% -10%, #233068, var(--bg));
+      background: var(--bg);
+      font-family: 'Menlo', 'Courier New', Courier, monospace;
       color: var(--text);
       min-height: 100vh;
-      padding: 18px;
+      padding: 24px 16px;
+      font-size: 13px;
     }
 
-    .app {
-      width: min(1100px, 100%);
+    /* ── Device shell ─────────────────────────────────── */
+    .device {
+      width: min(560px, 100%);
       margin: 0 auto;
-      background: linear-gradient(180deg, var(--panel), #12162a);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.4);
+      background: var(--dev);
+      border: 1px solid var(--dev-border);
+      box-shadow: 0 0 0 3px var(--shadow-outer), 0 24px 72px rgba(0,0,0,0.5);
     }
 
-    .header {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      display: grid;
-      gap: 8px;
-    }
-
-    .header h1 { margin: 0; font-size: 1.05rem; }
-    .header p { margin: 0; color: var(--muted); font-size: 0.86rem; }
-
-    .content { display: grid; gap: 12px; padding: 12px; }
-
-    .row {
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px;
-    }
-
-    .top-controls {
-      display: grid;
-      grid-template-columns: 1fr auto auto;
-      gap: 8px;
-      align-items: center;
-    }
-
-    select, input[type="number"], button {
-      background: #13182f;
-      color: var(--text);
-      border: 1px solid #3c467a;
-      border-radius: 8px;
-      padding: 8px 9px;
-      font-size: 0.84rem;
-    }
-
-    button {
-      cursor: pointer;
-      font-weight: 700;
-      background: #2c3563;
-    }
-
-    button:hover:not([disabled]) { filter: brightness(1.08); }
-    button[disabled] { opacity: 0.5; cursor: not-allowed; }
-
-    .status { margin-top: 6px; min-height: 1.1em; font-size: 0.82rem; color: var(--muted); }
-    .ok { color: var(--ok); }
-    .warn { color: var(--warn); }
-    .danger { color: var(--danger); }
-
-    .pad-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
-    }
-
-    .pad {
-      border: 1px solid #344070;
-      background: #12172d;
-      border-radius: 9px;
-      padding: 7px;
-      display: grid;
-      gap: 6px;
-      transition: background 0.1s ease, border-color 0.1s ease;
-    }
-
-    .pad.playing {
-      background: #c8f5e0;
-      border-color: #26c281;
-      color: #0a1a10;
-    }
-
-    .pad.playing .pad-head {
-      color: #1a4030;
-    }
-
-    .pad.empty {
-      background: #1e0f14;
-      border-color: #7a2535;
-    }
-
-    .pad.empty .pad-main {
-      background: #5a1c2e;
-      border-color: #a0304d;
-    }
-
-    .pad.disarmed {
-      opacity: 0.78;
-    }
-
-    .pad.disarmed .pad-main {
-      background: #2b3155;
-      border-color: #4a568e;
-    }
-
-    .pad-head {
+    /* ── Screen bar ───────────────────────────────────── */
+    .screen-bar {
+      background: var(--screen);
+      border-bottom: 2px solid var(--screen-border);
+      padding: 7px 14px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.74rem;
-      color: var(--muted);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+    }
+    .screen-bar .title    { color: var(--note); font-weight: bold; }
+    .screen-bar .subtitle { color: var(--sublabel); }
+
+    /* ── Sections ─────────────────────────────────────── */
+    .section {
+      border-bottom: 1px solid var(--border);
+      padding: 9px 12px;
+    }
+    .section:last-child { border-bottom: none; }
+
+    .section-label {
+      color: var(--sublabel);
+      font-size: 0.64rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
     }
 
-    .pad-main {
-      width: 100%;
-      padding: 10px 8px;
-      font-size: 0.81rem;
-      border-color: #4caf7c;
-      background: #1f6c4f;
+    /* ── Generic form controls ────────────────────────── */
+    select, input[type="number"] {
+      background: var(--screen);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      padding: 4px 6px;
+      font-family: inherit;
+      font-size: 0.78rem;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
     }
+    select:focus, input:focus { border-color: var(--dim); }
 
-    .pad-main.recording {
-      border-color: #f35b77;
-      background: #b91c3a;
-      animation: pulse 1s infinite;
-    }
-
-    .pad-clear {
-      width: 100%;
-      padding: 6px 8px;
-      background: #622626;
-      border-color: #9f4c4c;
+    /* ── Button base ──────────────────────────────────── */
+    .btn {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border2);
+      border-bottom: 2px solid var(--btn-shadow);
+      border-right: 2px solid var(--btn-shadow);
+      padding: 4px 9px;
+      font-family: inherit;
       font-size: 0.76rem;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
-
-    .pad-stop {
-      width: 100%;
-      padding: 6px 8px;
-      background: #7a5a1e;
-      border-color: #bc9151;
-      font-size: 0.76rem;
+    .btn:hover:not([disabled]) {
+      background: var(--btn-hover-bg);
+      border-color: var(--dim);
+      border-bottom-color: var(--btn-shadow);
+      border-right-color: var(--btn-shadow);
     }
-
-    .pad-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
+    .btn:active:not([disabled]) {
+      transform: translate(1px, 1px);
+      border-bottom-width: 1px;
+      border-right-width: 1px;
     }
+    .btn[disabled] { opacity: 0.3; cursor: not-allowed; }
 
-    .pad-route {
+    /* ── Status lines ─────────────────────────────────── */
+    .status { font-size: 0.72rem; color: var(--dim); margin-top: 5px; min-height: 1em; }
+    .status.ok     { color: var(--ok); }
+    .status.warn   { color: var(--warn); }
+    .status.danger { color: var(--rec); }
+
+    /* ── Audio row ────────────────────────────────────── */
+    .audio-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+    }
+    .audio-row > select { flex: 1; min-width: 140px; }
+    .ctrl-group {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      color: var(--sublabel);
       font-size: 0.72rem;
-      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .ctrl-group input[type="number"] { width: 52px; }
+
+    /* ── Pad grid ─────────────────────────────────────── */
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
     }
 
+    /* ── Individual pad ───────────────────────────────── */
+    .pad {
+      background: var(--screen);
+      border: 1px solid var(--border2);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .pad-head {
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.68rem;
+      gap: 4px;
+    }
+    .pad-note     { color: var(--note); font-weight: bold; letter-spacing: 0.06em; white-space: nowrap; }
+.pad-arm-label {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      color: var(--sublabel);
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+    .pad-arm-label input[type="checkbox"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 11px;
+      height: 11px;
+      border: 1px solid var(--border2);
+      background: var(--panel);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .pad-arm-label input[type="checkbox"]:checked {
+      background: var(--ok);
+      border-color: var(--ok);
+    }
+
+    /* armed state: tint the whole pad */
+    .pad.armed .pad-arm-label { color: var(--ok); }
+
+    .pad-main-wrap {
+      padding: 5px 6px 4px;
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    /* ── Main rec/play button — fixed square ──────────── */
+    .pad-main {
+      background: var(--pad-btn-bg);
+      border: 1px solid var(--border2);
+      border-bottom: 2px solid var(--btn-shadow);
+      border-right: 2px solid var(--btn-shadow);
+      color: var(--text);
+      font-family: inherit;
+      padding: 0;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      flex-shrink: 0;
+      gap: 2px;
+    }
+    .pad-main:hover:not([disabled]) { background: var(--pad-btn-hover); }
+    .pad-main:active:not([disabled]) {
+      transform: translate(1px, 1px);
+      border-bottom-width: 1px;
+      border-right-width: 1px;
+    }
+    .pad-main[disabled] { opacity: 0.22; cursor: not-allowed; }
+
+    /* icons and label inside pad-main */
+    .pi {
+      font-size: 1rem;
+      line-height: 1;
+      text-align: center;
+    }
+    .pad-main .pi { font-size: 1.3rem; }
+    .pad-main .pl { font-size: 0.52rem; letter-spacing: 0.07em; }
+    .pi-rec     { color: var(--rec); }
+    .pi-play    { color: var(--ok); }
+    .pi-retrig  { color: var(--play); }
+    .pi-stoprec { color: var(--rec); }
+
+    .pad-main.recording {
+      border-color: var(--rec);
+      animation: recpulse 0.7s ease-in-out infinite alternate;
+    }
+    @keyframes recpulse {
+      from { background: var(--rec-pulse-from); }
+      to   { background: var(--rec-pulse-to); }
+    }
+    .pad-main.playing { border-color: var(--ok); }
+
+    /* ── Stop / Clear — small icon-only squares ───────── */
+    /* two stacked beside the main button: 22+4+22 = 48px */
+    .pad-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .pad-stop, .pad-clear {
+      background: var(--pad-stop-bg);
+      border: 1px solid var(--border);
+      border-bottom: 2px solid var(--sm-shadow);
+      border-right: 2px solid var(--sm-shadow);
+      font-family: inherit;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .pad-stop:not([disabled]):hover, .pad-clear:not([disabled]):hover {
+      border-color: var(--border2);
+    }
+    .pad-stop:active:not([disabled]), .pad-clear:active:not([disabled]) {
+      transform: translate(1px, 1px);
+      border-bottom-width: 1px;
+      border-right-width: 1px;
+    }
+    .pad-stop[disabled], .pad-clear[disabled] { opacity: 0.18; cursor: not-allowed; }
+    .pad-stop  .pi { font-size: 0.65rem; color: var(--warn); }
+    .pad-clear .pi { font-size: 0.65rem; color: var(--rec); }
+
+    /* ── Output route strip ───────────────────────────── */
+    .pad-route {
+      padding: 3px 6px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.62rem;
+      color: var(--sublabel);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
     .pad-route select {
       flex: 1;
       min-width: 0;
-      padding: 5px 7px;
-      font-size: 0.75rem;
+      font-size: 0.68rem;
+      padding: 2px 4px;
     }
 
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(255, 92, 122, 0.4); }
-      70% { box-shadow: 0 0 0 8px rgba(255, 92, 122, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(255, 92, 122, 0); }
-    }
+    /* ── Pad state tints ──────────────────────────────── */
+    .pad.recording { border-color: var(--rec-pad-border); }
+    .pad.recording .pad-head { background: var(--rec-head-bg); border-color: var(--rec-head-border); }
+    .pad.playing   { border-color: var(--play-pad-border); }
+    .pad.playing   .pad-head { background: var(--play-head-bg); border-color: var(--play-head-border); }
+    .pad.has-clip  .pad-note { color: var(--ok); }
+    .pad.disarmed  { opacity: 0.65; }
+    .pad.disarmed .pad-main { opacity: 0.5; }
 
-    .config-head {
-      display: grid;
-      grid-template-columns: auto auto 1fr auto;
-      gap: 8px;
+    /* ── MIDI section ─────────────────────────────────── */
+    .midi-ctrl-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+    }
+    .midi-ctrl-row .label {
+      color: var(--text);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
     .pill {
       display: inline-block;
-      padding: 2px 7px;
-      border-radius: 999px;
-      border: 1px solid #4d5a9e;
-      background: #1b2250;
-      font-size: 0.72rem;
-      margin-right: 4px;
-      margin-top: 4px;
+      border: 1px solid var(--border2);
+      background: var(--panel);
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      color: var(--text);
+      margin: 2px 2px 0 0;
     }
 
-    .monitor {
-      font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Menlo, monospace;
-      font-size: 0.76rem;
-      background: #080c1a;
-      border: 1px solid #2a325a;
-      border-radius: 8px;
-      padding: 7px 9px;
-      height: 130px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column-reverse;
-      gap: 2px;
-      margin-top: 8px;
-    }
-
-    .monitor-row {
-      display: grid;
-      grid-template-columns: 52px 40px 38px 56px 60px 1fr;
-      gap: 6px;
-      padding: 2px 0;
-      border-bottom: 1px solid #141a33;
-      color: #9ea7cf;
-      white-space: nowrap;
-    }
-
-    .monitor-row .mt-time { color: #5a6490; }
-    .monitor-row .mt-ch   { color: #a8b0d8; }
-    .monitor-row .mt-type { color: #6ea8fe; font-weight: 700; }
-    .monitor-row .mt-note { color: #f5b041; }
-    .monitor-row .mt-vel  { color: #26c281; }
-    .monitor-row .mt-hit  { color: #ef5350; font-weight: 600; }
-
+    /* ── MIDI monitor ─────────────────────────────────── */
     .monitor-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 10px;
+      margin-top: 9px;
     }
+    .monitor {
+      font-family: inherit;
+      font-size: 0.7rem;
+      background: var(--screen);
+      border: 1px solid var(--border);
+      padding: 5px 8px;
+      height: 130px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 1px;
+      margin-top: 6px;
+    }
+    .monitor-row {
+      display: grid;
+      grid-template-columns: 52px 40px 38px 56px 60px 1fr;
+      gap: 6px;
+      padding: 1px 0;
+      border-bottom: 1px solid var(--monitor-sep);
+      white-space: nowrap;
+    }
+    .mt-time { color: var(--dim); }
+    .mt-ch   { color: var(--sublabel); }
+    .mt-type { color: var(--play); }
+    .mt-note { color: var(--note); }
+    .mt-vel  { color: var(--ok); }
+    .mt-hit  { color: var(--rec); font-weight: bold; }
 
-    @media (max-width: 800px) {
-      .pad-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .top-controls { grid-template-columns: 1fr; }
+    @media (max-width: 700px) {
+      .pad-grid { grid-template-columns: repeat(2, 1fr); }
+      .audio-row { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
-  <main class="app">
-    <header class="header">
-      <h1>Sampler Grid 4×4</h1>
-      <p>Single-file browser sampler. Per pad trigger = record / stop-record / play from start.</p>
-    </header>
+  <div class="device">
 
-    <section class="content">
-      <div class="row">
-        <div class="top-controls">
-          <select id="audioSource"></select>
-          <button id="refreshDevicesBtn" type="button">Refresh audio</button>
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted);">
-            Offset
-            <input id="triggerOffsetMs" type="number" value="0" min="-200" max="200" step="1" style="width:72px;padding:6px 8px;" />
-            ms
-          </label>
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.78rem;color:var(--muted);">
-            Test out
-            <select id="outputTestChannel" style="width:90px;padding:6px 8px;"></select>
-          </label>
-          <button id="testOutputBtn" type="button">Test output</button>
-        </div>
-        <div id="audioStatus" class="status"></div>
-      </div>
+    <div class="screen-bar">
+      <span class="title">SMPLBAG</span>
+      <span class="subtitle">CLIP SAMPLER/LAUNCHER // NO SERVER</span>
+      <button class="btn" id="modeToggle" type="button" style="font-size:0.68rem;padding:2px 8px;">[LIT]</button>
+    </div>
 
-      <div class="row">
-        <div id="padGrid" class="pad-grid"></div>
-        <div id="clipStatus" class="status">No clips recorded yet.</div>
+    <div class="section">
+      <div class="section-label">Audio Input</div>
+      <div class="audio-row">
+        <select id="audioSource"></select>
+        <button class="btn" id="refreshDevicesBtn" type="button">[Refresh]</button>
+        <div class="ctrl-group">
+          OFFS
+          <input id="triggerOffsetMs" type="number" value="0" min="-200" max="200" step="1" />
+          ms
+        </div>
+        <div class="ctrl-group">
+          TEST OUT
+          <select id="outputTestChannel" style="width:76px;"></select>
+          <button class="btn" id="testOutputBtn" type="button">[Test]</button>
+        </div>
       </div>
+      <div id="audioStatus" class="status"></div>
+    </div>
 
-      <div class="row">
-        <div class="config-head">
-          <strong>MIDI</strong>
-          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--muted);">
-            Ch
-            <select id="midiChannelSel" style="width:80px;padding:6px 8px;">
-              <option value="-1">All</option>
-              <option value="0">1</option>
-              <option value="1">2</option>
-              <option value="2">3</option>
-              <option value="3">4</option>
-              <option value="4">5</option>
-              <option value="5">6</option>
-              <option value="6">7</option>
-              <option value="7">8</option>
-              <option value="8">9</option>
-              <option value="9">10</option>
-              <option value="10">11</option>
-              <option value="11">12</option>
-              <option value="12">13</option>
-              <option value="13">14</option>
-              <option value="14">15</option>
-              <option value="15">16</option>
-            </select>
-          </label>
-          <span></span>
-          <button id="enableMidiBtn" type="button">Enable MIDI</button>
+    <div class="section">
+      <div class="section-label">Pads</div>
+      <div id="padGrid" class="pad-grid"></div>
+      <div id="clipStatus" class="status">No clips recorded yet.</div>
+    </div>
+
+    <div class="section">
+      <div class="midi-ctrl-row">
+        <span class="label">MIDI</span>
+        <div class="ctrl-group">
+          CH
+          <select id="midiChannelSel" style="width:68px;">
+            <option value="-1">ALL</option>
+            <option value="0">1</option>
+            <option value="1">2</option>
+            <option value="2">3</option>
+            <option value="3">4</option>
+            <option value="4">5</option>
+            <option value="5">6</option>
+            <option value="6">7</option>
+            <option value="7">8</option>
+            <option value="8">9</option>
+            <option value="9">10</option>
+            <option value="10">11</option>
+            <option value="11">12</option>
+            <option value="12">13</option>
+            <option value="13">14</option>
+            <option value="14">15</option>
+            <option value="15">16</option>
+          </select>
         </div>
-        <div id="midiStatus" class="status warn">MIDI not enabled.</div>
-        <div id="midiInputs" class="status"></div>
-        <div class="monitor-head">
-          <span style="font-size:0.78rem;color:var(--muted);">MIDI monitor</span>
-          <button id="clearMonitorBtn" type="button" style="padding:4px 8px;font-size:0.75rem;">Clear</button>
-        </div>
-        <div id="midiMonitor" class="monitor"></div>
+        <button class="btn" id="enableMidiBtn" type="button">[Enable MIDI]</button>
       </div>
-    </section>
-  </main>
+      <div id="midiStatus" class="status warn">MIDI not enabled.</div>
+      <div id="midiInputs" class="status"></div>
+      <div class="monitor-head">
+        <span style="font-size:0.68rem;color:var(--sublabel);text-transform:uppercase;letter-spacing:0.1em;">MIDI Monitor</span>
+        <button class="btn" id="clearMonitorBtn" type="button" style="padding:2px 7px;font-size:0.65rem;">[Clear]</button>
+      </div>
+      <div id="midiMonitor" class="monitor"></div>
+    </div>
+
+  </div>
 
   <script>
     const PAD_COUNT = 16;
@@ -547,27 +727,41 @@
       setStatus(ui.audioStatus, `Found ${inputs.length} audio input device(s), ${outputChannelCount} output channel(s). ${streamSettings}`.trim(), 'ok');
     }
 
+    function padMainHTML(rec, play, has) {
+      if (rec)  return '<span class="pi pi-stoprec">&#9632;</span><span class="pl"> STOP REC</span>';
+      if (play) return '<span class="pi pi-retrig">&gt;&gt;</span><span class="pl"> RETRIG</span>';
+      if (has)  return '<span class="pi pi-play">&gt;</span><span class="pl"> PLAY</span>';
+      return '<span class="pi pi-rec">O</span><span class="pl"> REC</span>';
+    }
+
     function createPad(index) {
       const el = document.createElement('div');
       el.className = 'pad';
       const note = padMidiNote(index);
       el.innerHTML = `
         <div class="pad-head">
-          <span><strong>${midiNoteName(note)}</strong> <span style="opacity:0.9;">(arm ${midiNoteName(note + ARM_NOTE_OFFSET)})</span></span>
-          <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
-            <input id="arm-${index}" type="checkbox" style="accent-color:var(--ok);" />
-            Arm
+          <span class="pad-note">${midiNoteName(note)}</span>
+          <label class="pad-arm-label">
+            ARM (${midiNoteName(note + ARM_NOTE_OFFSET)})
+            <input id="arm-${index}" type="checkbox" />
           </label>
         </div>
-        <button class="pad-main" id="padMain-${index}" type="button">● Rec / ▶</button>
-        <div class="pad-actions">
-          <button class="pad-stop" id="padStop-${index}" type="button" disabled>■ Stop</button>
-          <button class="pad-clear" id="padClear-${index}" type="button" disabled>✕ Clear</button>
+        <div class="pad-main-wrap">
+          <button class="pad-main" id="padMain-${index}" type="button">
+            <span class="pi pi-rec">O</span><span class="pl"> REC</span>
+          </button>
+          <div class="pad-actions">
+            <button class="pad-stop" id="padStop-${index}" type="button" disabled title="Stop">
+              <span class="pi">&#9632;</span>
+            </button>
+            <button class="pad-clear" id="padClear-${index}" type="button" disabled title="Clear">
+              <span class="pi">&#10005;</span>
+            </button>
+          </div>
         </div>
-        <label class="pad-route">
-          out
+        <div class="pad-route">
           <select id="padOut-${index}"></select>
-        </label>
+        </div>
       `;
       ui.padGrid.appendChild(el);
 
@@ -622,29 +816,25 @@
     }
 
     function updatePadUI(pad) {
-      const rec = isRecording(pad);
-      const play = isPlaying(pad);
-      const has = !!pad.blob;
+      const rec   = isRecording(pad);
+      const play  = isPlaying(pad);
+      const has   = !!pad.blob;
       const armed = !!pad.armedChk?.checked;
       const padEl = pad.mainBtn.closest('.pad');
 
       pad.mainBtn.classList.toggle('recording', rec);
+      pad.mainBtn.classList.toggle('playing', play && !rec);
       pad.clearBtn.disabled = !has || rec;
-      pad.stopBtn.disabled = !play && !rec;
-      pad.mainBtn.disabled = !armed && !rec && !play;
-      padEl.classList.toggle('playing', play && !rec);
-      padEl.classList.toggle('empty', !has && !rec);
-      padEl.classList.toggle('disarmed', !armed);
+      pad.stopBtn.disabled  = !play && !rec;
+      pad.mainBtn.disabled  = !armed && !rec && !play;
 
-      if (rec) {
-        pad.mainBtn.textContent = '■ Stop Rec';
-      } else if (play) {
-        pad.mainBtn.textContent = '▶ Retrig';
-      } else if (has) {
-        pad.mainBtn.textContent = '▶ Play';
-      } else {
-        pad.mainBtn.textContent = '● Rec / ▶';
-      }
+      padEl.classList.toggle('recording', rec);
+      padEl.classList.toggle('playing',   play && !rec);
+      padEl.classList.toggle('has-clip',  has);
+      padEl.classList.toggle('armed',     armed);
+      padEl.classList.toggle('disarmed',  !armed);
+
+      pad.mainBtn.innerHTML = padMainHTML(rec, play, has);
     }
 
     async function startPadRecording(pad, sourceLabel) {
@@ -686,6 +876,7 @@
         pad.mediaRecorder = null;
         updatePadUI(pad);
         setStatus(ui.clipStatus, `Pad ${pad.index + 1}: recorded (${(pad.blob.size / 1024).toFixed(1)} KB).`, 'ok');
+        saveClip(pad.index, pad.blob);
       };
 
       pad.mediaRecorder.onerror = e => {
@@ -718,20 +909,15 @@
       try { pad.activeSource.disconnect(); } catch { /* ignore */ }
       try { pad.activeRoute?.disconnect(); } catch { /* ignore */ }
       pad.activeSource = null;
-      pad.activeRoute = null;
-      pad.isPlaying = false;
+      pad.activeRoute  = null;
+      pad.isPlaying    = false;
       updatePadUI(pad);
       setStatus(ui.clipStatus, `Pad ${pad.index + 1}: stopped.`, 'ok');
     }
 
     function stopPad(pad) {
-      if (isRecording(pad)) {
-        stopPadRecording(pad);
-        return;
-      }
-      if (isPlaying(pad)) {
-        stopPadPlayback(pad);
-      }
+      if (isRecording(pad)) { stopPadRecording(pad); return; }
+      if (isPlaying(pad))   { stopPadPlayback(pad); }
     }
 
     async function playPad(pad, sourceLabel) {
@@ -748,7 +934,7 @@
           try { pad.activeSource.disconnect(); } catch { /* ignore */ }
           try { pad.activeRoute?.disconnect(); } catch { /* ignore */ }
           pad.activeSource = null;
-          pad.activeRoute = null;
+          pad.activeRoute  = null;
         }
 
         const src = audioContext.createBufferSource();
@@ -762,25 +948,25 @@
         src.connect(route, 0, outIndex);
         route.connect(audioContext.destination);
         pad.activeSource = src;
-        pad.activeRoute = route;
-        pad.isPlaying = true;
+        pad.activeRoute  = route;
+        pad.isPlaying    = true;
         src.onended = () => {
           if (pad.activeSource === src) {
             try { route.disconnect(); } catch { /* ignore */ }
             pad.activeSource = null;
-            pad.activeRoute = null;
-            pad.isPlaying = false;
+            pad.activeRoute  = null;
+            pad.isPlaying    = false;
             updatePadUI(pad);
           }
         };
         const offsetMs = Number.parseFloat(ui.triggerOffsetMs.value);
         const safeOffsetMs = Number.isFinite(offsetMs) ? Math.max(-200, Math.min(200, offsetMs)) : 0;
-        const offsetSec = safeOffsetMs / 1000;
-        const when = audioContext.currentTime + Math.max(0, offsetSec);
+        const offsetSec   = safeOffsetMs / 1000;
+        const when        = audioContext.currentTime + Math.max(0, offsetSec);
         const startOffset = Math.max(0, -offsetSec);
         if (startOffset >= src.buffer.duration) {
           pad.activeSource = null;
-          pad.isPlaying = false;
+          pad.isPlaying    = false;
           updatePadUI(pad);
           setStatus(ui.clipStatus, `Pad ${pad.index + 1}: offset too negative for clip length.`, 'warn');
           return;
@@ -801,14 +987,15 @@
         try { pad.activeRoute?.disconnect(); } catch { /* ignore */ }
       }
       pad.activeSource = null;
-      pad.activeRoute = null;
-      pad.isPlaying = false;
+      pad.activeRoute  = null;
+      pad.isPlaying    = false;
       if (pad.url) URL.revokeObjectURL(pad.url);
-      pad.url = null;
-      pad.blob = null;
+      pad.url    = null;
+      pad.blob   = null;
       pad.buffer = null;
       updatePadUI(pad);
       setStatus(ui.clipStatus, `Pad ${pad.index + 1}: cleared.`, 'warn');
+      deleteClip(pad.index);
     }
 
     async function triggerPad(pad, sourceLabel) {
@@ -817,18 +1004,12 @@
         return;
       }
       if (isRecording(pad)) {
-        if (pad.buffer) {
-          await playPad(pad, sourceLabel);
-          return;
-        }
+        if (pad.buffer) { await playPad(pad, sourceLabel); return; }
         stopPadRecording(pad);
         return;
       }
       if (isStopping(pad)) return;
-      if (!pad.blob) {
-        await startPadRecording(pad, sourceLabel);
-        return;
-      }
+      if (!pad.blob) { await startPadRecording(pad, sourceLabel); return; }
       await playPad(pad, sourceLabel);
     }
 
@@ -848,33 +1029,31 @@
       const noteName = type === 'Note' ? midiNoteName(data1) : `CC${data1}`;
       const row = document.createElement('div');
       row.className = 'monitor-row';
-      row.innerHTML = `<span class="mt-time">${ts}</span><span class="mt-ch">Ch ${ch + 1}</span><span class="mt-type">${type}</span><span class="mt-note">${noteName}</span><span class="mt-vel">vel ${data2}</span><span class="mt-hit">${hit ? '▶ pad' : ''}</span>`;
+      row.innerHTML = `<span class="mt-time">${ts}</span><span class="mt-ch">Ch ${ch + 1}</span><span class="mt-type">${type}</span><span class="mt-note">${noteName}</span><span class="mt-vel">vel ${data2}</span><span class="mt-hit">${hit ? '> pad' : ''}</span>`;
       ui.midiMonitor.prepend(row);
       while (ui.midiMonitor.children.length > MONITOR_MAX) ui.midiMonitor.removeChild(ui.midiMonitor.lastChild);
     }
 
     async function handleMidiMessage(event) {
       const [status, data1, data2] = event.data;
-      const command = status & 0xf0;
-      const channel = status & 0x0f;
+      const command  = status & 0xf0;
+      const channel  = status & 0x0f;
       const selectedChannel = Number(ui.midiChannelSel.value);
-      const channelMatches = selectedChannel === -1 || channel === selectedChannel;
+      const channelMatches  = selectedChannel === -1 || channel === selectedChannel;
       const triggerHits = channelMatches ? matchingPadsForMidi(data1) : [];
-      const armHits = channelMatches ? matchingPadsForArmNote(data1) : [];
+      const armHits     = channelMatches ? matchingPadsForArmNote(data1) : [];
 
       if (command === 0x80 || (command === 0x90 && data2 === 0)) {
         logMidiEvent(channel, 'Note', data1, data2, triggerHits.length > 0 || armHits.length > 0);
         if (!channelMatches) return;
         for (const pad of triggerHits) {
-          if (isRecording(pad)) {
-            await stopPadRecording(pad);
-          }
+          if (isRecording(pad)) { await stopPadRecording(pad); }
         }
         return;
       }
 
       if (command === 0x90 || command === 0xB0) {
-        const type = command === 0x90 ? 'Note' : 'CC';
+        const type   = command === 0x90 ? 'Note' : 'CC';
         const hasHit = command === 0x90
           ? (triggerHits.length > 0 || armHits.length > 0)
           : triggerHits.length > 0;
@@ -884,9 +1063,7 @@
         if (command === 0x90) {
           for (const pad of armHits) {
             pad.armedChk.checked = !pad.armedChk.checked;
-            if (!pad.armedChk.checked && (isRecording(pad) || isPlaying(pad))) {
-              stopPad(pad);
-            }
+            if (!pad.armedChk.checked && (isRecording(pad) || isPlaying(pad))) { stopPad(pad); }
             updatePadUI(pad);
             setStatus(ui.clipStatus, `Pad ${pad.index + 1}: ${pad.armedChk.checked ? 'armed' : 'disarmed'} (Note ${data1}).`, 'ok');
           }
@@ -912,10 +1089,7 @@
     }
 
     function refreshMidiInputsUI() {
-      if (!midiAccess) {
-        ui.midiInputs.textContent = '';
-        return;
-      }
+      if (!midiAccess) { ui.midiInputs.textContent = ''; return; }
       const names = [...midiAccess.inputs.values()].map(i => i.name || 'Unnamed MIDI input');
       ui.midiInputs.innerHTML = names.length
         ? names.map(name => `<span class="pill">${name}</span>`).join('')
@@ -943,6 +1117,77 @@
       setStatus(ui.midiStatus, 'MIDI enabled. Note/CC now triggers mapped pads.', 'ok');
     }
 
+    // ── IndexedDB clip persistence ────────────────────────
+    const DB_NAME    = 'smplbag';
+    const DB_VERSION = 1;
+    const DB_STORE   = 'clips';
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(DB_STORE);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+      });
+    }
+
+    async function saveClip(index, blob) {
+      try {
+        const db = await openDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(DB_STORE, 'readwrite');
+          tx.objectStore(DB_STORE).put(blob, index);
+          tx.oncomplete = resolve;
+          tx.onerror    = () => reject(tx.error);
+        });
+        db.close();
+      } catch { /* ignore storage errors */ }
+    }
+
+    async function deleteClip(index) {
+      try {
+        const db = await openDB();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(DB_STORE, 'readwrite');
+          tx.objectStore(DB_STORE).delete(index);
+          tx.oncomplete = resolve;
+          tx.onerror    = () => reject(tx.error);
+        });
+        db.close();
+      } catch { /* ignore */ }
+    }
+
+    async function loadAllClips() {
+      try {
+        const db = await openDB();
+        const stored = await new Promise((resolve, reject) => {
+          const result = {};
+          const tx  = db.transaction(DB_STORE, 'readonly');
+          const req = tx.objectStore(DB_STORE).openCursor();
+          req.onsuccess = e => {
+            const cursor = e.target.result;
+            if (cursor) { result[cursor.key] = cursor.value; cursor.continue(); }
+            else resolve(result);
+          };
+          req.onerror = () => reject(req.error);
+        });
+        db.close();
+
+        let count = 0;
+        for (const [keyStr, blob] of Object.entries(stored)) {
+          const pad = pads[Number(keyStr)];
+          if (!pad || !blob || blob.size === 0) continue;
+          pad.blob = blob;
+          if (pad.url) URL.revokeObjectURL(pad.url);
+          pad.url = URL.createObjectURL(blob);
+          await decodePadBlobToBuffer(pad);
+          updatePadUI(pad);
+          count++;
+        }
+        if (count > 0) setStatus(ui.clipStatus, `Restored ${count} clip(s) from browser storage.`, 'ok');
+      } catch { /* ignore */ }
+    }
+
     ui.refreshDevicesBtn.addEventListener('click', refreshAudioDevices);
     ui.testOutputBtn.addEventListener('click', playOutputTestTone);
     ui.enableMidiBtn.addEventListener('click', enableMidi);
@@ -953,6 +1198,20 @@
     fillOutputSelect(ui.outputTestChannel, 0);
     buildPads();
     refreshAudioDevices();
+    loadAllClips();
+
+    // ── Light / dark mode toggle ──────────────────────────
+    const modeToggleBtn = document.getElementById('modeToggle');
+    function applyTheme(light) {
+      document.body.classList.toggle('light', light);
+      modeToggleBtn.textContent = light ? '[DRK]' : '[LIT]';
+    }
+    applyTheme(localStorage.getItem('smplbag-theme') === 'light');
+    modeToggleBtn.addEventListener('click', () => {
+      const isLight = !document.body.classList.contains('light');
+      applyTheme(isLight);
+      localStorage.setItem('smplbag-theme', isLight ? 'light' : 'dark');
+    });
   </script>
 </body>
 </html>

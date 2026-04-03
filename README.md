@@ -1,12 +1,8 @@
 # Smplbag 
 
-A browser-based "**non-looping looper**" which is one-shot sampler for songwriting and live performance. This tool is designed to be driven primarily by an external MIDI sequencer (for example a Dirtywave M8), while still being playable from the web UI or a keyboard controller.
+A browser-based **clip sampler/launcher** — a one-shot sampler for songwriting and live performance, designed to be driven primarily by an external MIDI sequencer (for example a Dirtywave M8), while still being playable from the web UI or a keyboard controller.
 
-[TRY ME!](https://ptsefton.com/smplbag/)
-
-
-
-The name comes from "Sample Bag", but if you read that as "simple" that's OK, that's a design goal. 
+The name comes from "Sample Bag", but if you read that as "simple" that's OK, that's a design goal.
 
 (A sample bag AKA Show Bag, in Australian English was a thing you used to get at an agricultural show (you know, like a fair). When we went to the Royal Easter Show in Sydney my dad would tell me *every time* that in his day (the 1940s) they used to be free, and contain, you know *samples* but I didn't really believe him. In the '70s you had to *buy* them and you still do - they typically had different kinds of some kind of food like licorice or chocolate or chips with some kind of toy or something but now they sometimes contain just toys. Anyway this smplbag's free!)
 
@@ -32,41 +28,53 @@ Example:
 - `C#1` (MIDI 1) can target the next section (for example chorus).
 - `D1` (MIDI 2) can target bridge.
 
-You can pre-program a structure in your sequencer, then capture and trigger parts in performance with minimal manual interaction. 
+You can pre-program a structure in your sequencer, then capture and trigger parts in performance with minimal manual interaction.
 
-On the M8 the plan is then resample each section back into a new instrument and drop it in to the song (pending the option to export samples as a zip of .wav files). 
+On the M8 the plan is then resample each section back into a new instrument and drop it in to the song (pending the option to export samples as a zip of .wav files).
 
 
 ## Features
 
-- 4×4 pad grid (16 pads*) 
+- 4×4 pad grid (16 pads*)
 - Fixed note mapping* starting at MIDI 0 (`C1` display convention)
-- Per-pad arm toggle
+- Per-pad arm toggle (with arm note shown in the pad header)
 - Per-pad output channel selection
 - MIDI channel filtering (or all channels)
 - MIDI monitor in UI
 - Adjustable trigger offset if you have latency issues (ms)
 - Input device selection and refresh
 - Stop / clear controls per pad
-- Output channel test tone tool to help work out where stuff is going in your USB interface. (Eg in the Tascam Model 12 in 10*12 mode tracks 1&2 go to 9&10 and 3-8 go to tho 3-8)
+- Output channel test tone tool
+- **Clips saved to browser storage** (IndexedDB) — survive page reload automatically
+- **Light/dark mode toggle** — preference saved across sessions
+- M8-inspired monospace terminal UI
 
-\* Current 4x4 layout and midi mapping might made configurable
+## UI
+
+Single `index.html` — no build step, no server. Open in a Chromium-based browser.
+
+
+Each pad shows:
+- Note name and arm note (e.g. `C1`, `ARM (E3)`)
+- A square button: `O REC` → `> PLAY` → `>> RETRIG` → `■ STOP REC` depending on state
+- Two small icon buttons for stop (`■`) and clear (`✕`)
+- Output channel selector
+
+A `[LIT]` / `[DRK]` toggle in the header switches between light and dark modes.
 
 ## TODO (maybe)
 
-- Make it prettier - make it look like a hardware sample or, even better, like the M8 text interface
 - Customize number of clips
 - Customize midi behaviour
 - Resampling features like play all (populated) clips so they can be sampled and sliced
 - Allow for different takes on a note/sample that can be switched in the UI or via midi CC
-- Export a zip 
-- Save clips to browser storage
+- Export a zip
 - Import?
 
 
 ## MIDI behavior (current)
 
-For a pad’s trigger note:
+For a pad's trigger note:
 - **Note ON**
   - If pad empty and armed: start recording
   - If already recording: stop recording, then play captured clip
@@ -97,3 +105,4 @@ Arm toggling can be done from dedicated arm notes (`trigger note + 24 semitones`
 - Browser audio device behaviour depends on OS + browser + interface drivers.
 - Multi-output routing may require mixer/interface routing configuration.
 - This app records and plays clips; it does not implement DAW-style timeline editing and it has no internal sequencer or loop triggering (yet).
+- Clips are stored in the browser's IndexedDB; clearing site data will erase them.
