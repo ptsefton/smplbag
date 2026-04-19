@@ -30,7 +30,7 @@ Example:
 
 You can pre-program a structure in your sequencer, then capture and trigger parts in performance with minimal manual interaction.
 
-On the M8 the plan is then resample each section back into a new instrument and drop it in to the song (pending the option to export samples as a zip of .wav files).
+On the M8 the plan is then resample each section back into a new instrument and drop it in to the song. Use the **[Export]** button to download all recorded clips as a single WAV file with slice markers — M8-compatible cue chunk format so the M8 can slice it directly.
 
 
 ## Features
@@ -46,6 +46,9 @@ On the M8 the plan is then resample each section back into a new instrument and 
 - Stop / clear controls per pad
 - Output channel test tone tool
 - **Clips saved to browser storage** (IndexedDB) — survive page reload automatically
+- **WAV export** — all clips concatenated into one file, ordered C1 upward, padded to equal length, with M8-compatible cue/slice markers and DAW chapter labels
+- Arm All / Disarm All and Clear All controls
+- Per-pad output channel persisted across sessions
 - **Light/dark mode toggle** — preference saved across sessions
 - M8-inspired monospace terminal UI
 
@@ -63,10 +66,9 @@ A `[LIT]` / `[DRK]` toggle in the header switches between light and dark modes.
 ## TODO (maybe)
 
 - Customize number of clips
-- Customize midi behaviour
-- Resampling features like play all (populated) clips so they can be sampled and sliced
-- Allow for different takes on a note/sample that can be switched in the UI or via midi CC
-- Export a zip
+- Customize MIDI behaviour
+- Allow for different takes on a note/sample that can be switched in the UI or via MIDI CC
+- Export as zip of individual .wav files
 - Import?
 
 

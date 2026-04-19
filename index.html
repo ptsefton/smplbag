@@ -460,6 +460,9 @@
           ms
         </div>
         <div class="ctrl-group">
+          LAT: <span id="latencyDisplay">—</span> ms
+        </div>
+        <div class="ctrl-group">
           TEST OUT
           <select id="outputTestChannel" style="width:76px;"></select>
           <button class="btn" id="testOutputBtn" type="button">[Test]</button>
@@ -469,7 +472,11 @@
     </div>
 
     <div class="section">
-      <div class="section-label">Pads</div>
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+        <span class="section-label" style="margin:0;">Pads</span>
+        <button class="btn" id="armAllBtn" type="button" style="font-size:0.68rem;padding:2px 8px;">[Arm All]</button>
+        <button class="btn" id="clearAllBtn" type="button" style="font-size:0.68rem;padding:2px 8px;">[Clear All]</button>
+      </div>
       <div id="padGrid" class="pad-grid"></div>
       <div id="clipStatus" class="status">No clips recorded yet.</div>
     </div>
@@ -671,7 +678,9 @@
       const t = mediaStream?.getAudioTracks?.()[0];
       if (!t) return '';
       const s = t.getSettings?.() || {};
-      return `ec:${s.echoCancellation ?? '-'} ns:${s.noiseSuppression ?? '-'} agc:${s.autoGainControl ?? '-'} sr:${s.sampleRate ?? '-'} ch:${s.channelCount ?? '-'} lat:${s.latency ?? '-'}`;
+      const latMs = s.latency != null ? (s.latency * 1000).toFixed(1) : null;
+      document.getElementById('latencyDisplay').textContent = latMs ?? '—';
+      return `ec:${s.echoCancellation ?? '-'} ns:${s.noiseSuppression ?? '-'} agc:${s.autoGainControl ?? '-'} sr:${s.sampleRate ?? '-'} ch:${s.channelCount ?? '-'}`;
     }
 
     async function ensureStream(deviceId) {
@@ -784,7 +793,11 @@
         outputSel: el.querySelector(`#padOut-${index}`)
       };
 
-      fillOutputSelect(pad.outputSel, 0);
+      const savedOut = Number.parseInt(localStorage.getItem(`smplbag-out-${index}`), 10);
+      fillOutputSelect(pad.outputSel, Number.isFinite(savedOut) ? savedOut : 0);
+      pad.outputSel.addEventListener('change', () => {
+        localStorage.setItem(`smplbag-out-${index}`, pad.outputSel.value);
+      });
 
       pad.mainBtn.addEventListener('click', () => triggerPad(pad, 'Button'));
       pad.stopBtn.addEventListener('click', () => stopPad(pad));
@@ -1124,19 +1137,20 @@
       const numCues      = cuePositions.length;
       const cueDataBytes = 4 + numCues * 24;
 
-      // labl sub-chunk per cue: "labl"(4) + size(4) + id(4) + null-term string padded to even
+      // LIST/adtl/labl for DAW chapter names (kept after cue chunk)
       const lablStrs = cuePositions.map((_, i) => {
         const s = ((labels && labels[i]) || `Clip ${i + 1}`) + '\0';
         return s.length % 2 ? s + '\0' : s; // pad odd-length strings to even
       });
       const lablBodyBytes = lablStrs.reduce((n, s) => n + 8 + 4 + s.length, 0);
-      const listDataBytes = 4 + lablBodyBytes; // "adtl" + labl chunks
+      const listDataBytes = 4 + lablBodyBytes;
 
-      const waveBytes = 4                                      // "WAVE" fourcc
-                      + 24                                     // fmt  chunk
-                      + (numCues ? 8 + cueDataBytes : 0)      // cue  chunk
-                      + (numCues ? 8 + listDataBytes : 0)     // LIST/adtl chunk
-                      + 8 + dataBytes;                        // data chunk
+      // M8 expects: fmt → data → cue → LIST
+      const waveBytes = 4                                  // "WAVE" fourcc
+                      + 24                                 // fmt  chunk
+                      + 8 + dataBytes                      // data chunk
+                      + (numCues ? 8 + cueDataBytes : 0)  // cue  chunk (after data, like M8)
+                      + (numCues ? 8 + listDataBytes : 0); // LIST/adtl chunk
 
       const buf  = new ArrayBuffer(8 + waveBytes);
       const view = new DataView(buf);
@@ -1151,21 +1165,22 @@
       str('fmt '); u32(16);
       u16(1); u16(numChannels); u32(sampleRate);
       u32(sampleRate * numChannels * 2); u16(numChannels * 2); u16(16);
-      // cue
+      // data (before cue, matching M8 layout)
+      str('data'); u32(dataBytes);
+      new Int16Array(buf, p).set(int16Data);
+      p += dataBytes;
+      // cue — 0-based IDs, position=0, fccChunk='atad' (M8 stores 'data' as LE dword)
       if (numCues) {
         str('cue '); u32(cueDataBytes); u32(numCues);
         for (let i = 0; i < numCues; i++) {
-          u32(i + 1); u32(cuePositions[i]); str('data'); u32(0); u32(0); u32(cuePositions[i]);
+          u32(i); u32(0); str('atad'); u32(0); u32(0); u32(cuePositions[i]);
         }
-        // LIST/adtl/labl — gives cue points names so ffprobe shows them as chapters
+        // LIST/adtl/labl for DAWs and ffprobe
         str('LIST'); u32(listDataBytes); str('adtl');
         for (let i = 0; i < numCues; i++) {
-          str('labl'); u32(4 + lablStrs[i].length); u32(i + 1); str(lablStrs[i]);
+          str('labl'); u32(4 + lablStrs[i].length); u32(i); str(lablStrs[i]);
         }
       }
-      // data
-      str('data'); u32(dataBytes);
-      new Int16Array(buf, p).set(int16Data);
       return buf;
     }
 
@@ -1296,6 +1311,18 @@
     }
 
     document.getElementById('exportBtn').addEventListener('click', exportClips);
+
+    document.getElementById('armAllBtn').addEventListener('click', () => {
+      const allArmed = pads.every(p => p.armedChk.checked);
+      pads.forEach(p => { p.armedChk.checked = !allArmed; updatePadUI(p); });
+      document.getElementById('armAllBtn').textContent = allArmed ? '[Arm All]' : '[Disarm All]';
+      setStatus(ui.clipStatus, allArmed ? 'All pads disarmed.' : 'All pads armed.', 'ok');
+    });
+
+    document.getElementById('clearAllBtn').addEventListener('click', () => {
+      pads.forEach(p => clearPad(p));
+      setStatus(ui.clipStatus, 'All pads cleared.', 'warn');
+    });
     ui.refreshDevicesBtn.addEventListener('click', refreshAudioDevices);
     ui.testOutputBtn.addEventListener('click', playOutputTestTone);
     ui.enableMidiBtn.addEventListener('click', enableMidi);
